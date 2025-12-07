@@ -25,7 +25,7 @@ export default {
     async fetch(request): Promise<Response> {
         const url = request.url.includes("/embed/")
             ? new URL(request.url.replace("/embed/", "/"))
-            : request.url;
+            : new URL(request.url);
 
         const route = POST_PATTERN.exec(url);
         const actor = route?.pathname.groups.actor;
@@ -45,10 +45,18 @@ export default {
         if (metaResult.status === 'error') return serverError();
         if (metaResult.status === 'not-found') return notFound();
 
+        if (url.searchParams.get('redirect')) {
+            const tag = metaResult.tags.find(tag => tag.includes('og:image'));
+            const mediaUrl = tag?.split('content="')[1]?.split('"')[0];
+            if (mediaUrl) {
+                return Response.redirect(mediaUrl, 302);
+            }
+        }
+
         return renderTemplate({
             did,
             rkey,
-            meta: metaResult.tags,
+            meta: metaResult.tags
         });
     },
 } satisfies ExportedHandler<Env>;
